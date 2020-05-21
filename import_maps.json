@@ -1,0 +1,1 @@
+{ "imports": { "svelte/internal": "https://unpkg.com/svelte@3.22.3/internal/index.mjs" } }
