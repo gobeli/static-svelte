@@ -17,5 +17,12 @@
     "rollup-plugin-svelte": "^5.2.2",
     "sirv": "^0.4.2",
     "svelte": "^3.22.3"
+  },
+  "devDependencies": {
+    "@snowpack/app-scripts-svelte": "^0.7.0",
+    "snowpack": "^2.0.0-rc.6"
+  },
+  "webDependencies": {
+    "page": "^1.11.6"
   }
 }

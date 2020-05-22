@@ -64,7 +64,10 @@ async function create_server(pages, template, client_bundles) {
 
     polka()
       .use(sirv('__build__/dist'))
-      ${routes.map((route, i) => `.get('/${route}', serve_route(${i}))`).join('\n')}
+      ${routes
+        .map((route) => (route === 'index' ? '' : route))
+        .map((route, i) => `.get('/${route}', serve_route(${i}))`)
+        .join('\n')}
       .listen(3000, err => {
         if (err) throw err;
         console.log('> Running on localhost:3000');
@@ -95,7 +98,7 @@ async function create_server(pages, template, client_bundles) {
   await bundle_ssr.write(config.outputOptions)
 }
 
-async function compile_pages(pages, template) {
+async function compile_pages(pages) {
   return await Promise.all(
     pages
       .map((file) => ({

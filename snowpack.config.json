@@ -1,0 +1,10 @@
+{
+  "extends": "@snowpack/app-scripts-svelte",
+  "scripts": {
+    "mount:public": "mount public --to /",
+    "mount:src": "mount src --to /__dev__"
+  },
+  "knownEntrypoints": ["page", "svelte"],
+  "devOptions": {},
+  "installOptions": {}
+}
