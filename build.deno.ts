@@ -1,20 +1,37 @@
 import 'https://unpkg.com/svelte@3.22.3/compiler.js'
-import { join } from 'https://deno.land/std@0.51.0/path/mod.ts'
-import { emptyDir, readFileStr, writeFileStr, ensureFile } from 'https://deno.land/std@0.51.0/fs/mod.ts'
+import { join, normalize } from 'https://deno.land/std@0.53.0/path/mod.ts'
+import { emptyDir, readFileStr, writeFileStr, ensureFile, exists } from 'https://deno.land/std@0.53.0/fs/mod.ts'
+
+import build_config from './build.config.ts'
 
 const compiler = (window as any)['svelte']
-const cwd = Deno.cwd()
-const build_dir = join(cwd, '__build__')
-const source_dir = join(cwd, 'src')
-const pages_dir = join(build_dir, 'pages')
-const internal_dir = join(source_dir, 'internal')
+const build_dir = './__build__'
+const public_dir = join(build_dir, 'public')
 
-async function compile_component(path) {
+export interface Component {
+  path: string
+  buildPath: string
+}
+
+export interface Page {
+  route: string
+  file: string
+}
+
+export interface BuildConfig {
+  pages: Array<Page>
+  template: string
+}
+
+async function read_template(path: string) {
+  if (!(await exists(path))) {
+    throw new Error(`Template not found at ${path}`)
+  }
+  return readFileStr(path)
+}
+
+async function compile_component(path: string): Promise<Component> {
   const source = await readFileStr(path)
-
-  const sourceWithLayout = `
-    <script>
-  `
 
   const ssr = compiler.compile(source, {
     dev: false,
@@ -28,47 +45,49 @@ async function compile_component(path) {
   // Replacing the src with __build__ for the output is hacky and unreliable --> change
   const build_path = path.replace('.svelte', '.js').replace('src', '__build__')
   await ensureFile(build_path)
-  const code = ssr.js.code
-    .replace(/import (.*).svelte";/g, 'import $1.js";')
+  const code = ssr.js.code.replace(/import (.*).svelte";/g, 'import $1.js";')
   await writeFileStr(build_path, code)
+
+  return { path, buildPath: build_path }
 }
 
-async function build_page(path) {
-  const component = await import(path)
-  console.log(component.default.render())
-}
-
-async function compile_dir(dir) {
+async function compile_dir(dir, components: Component[]) {
   for await (const dir_entry of Deno.readDir(dir)) {
     if (dir_entry.isDirectory) {
-      await compile_dir(join(dir, dir_entry.name))
+      await compile_dir(join(dir, dir_entry.name), components)
     } else if (dir_entry.isFile) {
       if (dir_entry.name.endsWith('.svelte')) {
-        await compile_component(join(dir, dir_entry.name))
+        const component = await compile_component(join(dir, dir_entry.name))
+        components.push(component)
       }
     }
   }
 }
 
-async function build_pages(dir) {
-  for await (const dir_entry of Deno.readDir(dir)) {
-    if (dir_entry.isDirectory) {
-      await compile_dir(join(dir, dir_entry.name))
-    } else if (dir_entry.isFile) {
-      if (dir_entry.name.endsWith('.js')) {
-        await build_page(join(dir, dir_entry.name))
-      }
+async function build_pages(components: Component[], template: string) {
+  build_config.pages.forEach(async (page) => {
+    const component = components.find((c) => normalize(c.path) === normalize(page.file))
+    if (!component) {
+      throw new Error(`Component at ${page.file} not found!`)
     }
-  }
+    const built_component = await import('./' + component.buildPath)
+    const public_path = join(public_dir, ...page.route.split('/'), 'index.html')
+    await ensureFile(public_path)
+    const page_html = template.replace('%svelte.html%', built_component.default.render().html)
+    await writeFileStr(public_path, page_html)
+  })
 }
 
 async function main() {
   // remove current build
   await emptyDir(build_dir)
 
-  await compile_dir(source_dir)
+  const template = await read_template(build_config.template)
 
-  await build_pages(pages_dir)
+  const components = []
+  await compile_dir('./src', components)
+
+  await build_pages(components, template)
 }
 
 main()
