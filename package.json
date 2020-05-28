@@ -1,28 +1,20 @@
 {
-  "name": "static-svelte",
+  "name": "static-svelte-snowpack",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node build.mjs",
-    "start": "node __build__/server.out.js"
+    "build": "snowpack build",
+    "start": "snowpack dev"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "polka": "^0.5.2",
-    "rollup": "^2.10.5",
-    "rollup-plugin-node-resolve": "^5.2.0",
-    "rollup-plugin-svelte": "^5.2.2",
-    "sirv": "^0.4.2",
     "svelte": "^3.22.3"
   },
   "devDependencies": {
-    "@snowpack/app-scripts-svelte": "^0.7.0",
+    "@snowpack/plugin-svelte": "^1.0.1",
     "snowpack": "^2.0.0-rc.6"
-  },
-  "webDependencies": {
-    "page": "^1.11.6"
   }
 }

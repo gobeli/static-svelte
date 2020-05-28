@@ -1,10 +1,11 @@
 {
-  "extends": "@snowpack/app-scripts-svelte",
   "scripts": {
     "mount:public": "mount public --to /",
-    "mount:src": "mount src --to /__dev__"
+    "mount:src": "mount src --to /src",
+    "run:build": "deno run -A --unstable -c tsconfig.json --importmap import_maps.json build.deno.ts"
   },
-  "knownEntrypoints": ["page", "svelte"],
+  "plugins": [["@snowpack/plugin-svelte", { "hydratable": true }]],
+  "knownEntrypoints": ["svelte"],
   "devOptions": {},
   "installOptions": {}
 }

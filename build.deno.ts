@@ -4,13 +4,14 @@ import { emptyDir, readFileStr, writeFileStr, ensureFile, exists } from 'https:/
 
 import build_config from './build.config.ts'
 
+const public_dir = './public'
 const build_dir = './__build__'
-const public_dir = join(build_dir, 'public')
+const src_dir = './src'
+const internal_dir = join(src_dir, 'internal')
 
 export interface Component {
   path: string
   buildPath: string
-  clientPath: string
 }
 
 export interface Page {
@@ -39,29 +40,16 @@ async function compile_component(path: string): Promise<Component> {
     format: 'esm',
     filename: path,
     generate: 'ssr',
-    sveltePath: 'https://dev.jspm.io/svelte',
-  })
-
-  const client = compiler.compile(source, {
-    dev: false,
-    css: false,
-    filename: path,
-    hydratable: true,
-    format: 'esm',
-    sveltePath: 'https://dev.jspm.io/svelte',
+    // sveltePath: 'https://dev.jspm.io/svelte',
   })
 
   // Replacing the src with __build__ for the output is hacky and unreliable --> change
   const build_path = path.replace('.svelte', '.js').replace('src', '__build__')
-  const client_path = path.replace('.svelte', '.js').replace('src', '__build__/client')
   await ensureFile(build_path)
   const code = ssr.js.code.replace(/import (.*).svelte";/g, 'import $1.js";')
   await writeFileStr(build_path, code)
-  const client_code = client.js.code.replace(/import (.*).svelte";/g, 'import $1.js";')
-  await ensureFile(client_path)
-  await writeFileStr(client_path, client_code)
 
-  return { path, buildPath: build_path, clientPath: client_path }
+  return { path, buildPath: build_path }
 }
 
 async function compile_dir(dir, components: Component[]) {
@@ -77,6 +65,44 @@ async function compile_dir(dir, components: Component[]) {
   }
 }
 
+async function create_internal() {
+  const internal = `
+<script>
+// This file is generated
+import Layout from '../pages/_layout.svelte'
+
+export let page
+</script>
+
+<Layout>
+  <svelte:component this={page} />
+</Layout>
+`
+  const path = join(internal_dir, 'internal.svelte')
+  await ensureFile(path)
+  await writeFileStr(path, internal)
+}
+
+async function create_entrypoint(page: Page) {
+  const name = basename(page.file, '.svelte')
+  const entrypoint = `
+// This file is generated
+import Page from '../pages/${name}.svelte'
+import Dev from './internal.svelte'
+
+new Dev({
+  target: document.getElementById('app'),
+  hydrate: true,
+  props: { page: Page }
+})
+`
+
+  const path = join(internal_dir, name + '.js')
+  await ensureFile(path)
+  await writeFileStr(path, entrypoint)
+  return path
+}
+
 async function build_pages(components: Component[], template: string) {
   build_config.pages.forEach(async (page) => {
     const component: Component = components.find((c) => normalize(c.path) === normalize(page.file))
@@ -85,22 +111,30 @@ async function build_pages(components: Component[], template: string) {
     }
     const built_component = await import('./' + component.buildPath)
     const public_path = join(public_dir, ...page.route.split('/'), 'index.html')
+
+    const entry_file = await create_entrypoint(page)
+
     await ensureFile(public_path)
-    const page_html = template.replace('%svelte.html%', built_component.default.render().html)
+    const page_html = template
+      .replace('%svelte.notice%', 'This file is generated')
+      .replace('%svelte.html%', built_component.default.render().html)
+      .replace('%svelte.bundle%', '/' + entry_file)
     await writeFileStr(public_path, page_html)
-    
   })
 }
 
 async function main() {
   // remove current build
   await emptyDir(build_dir)
+  await emptyDir(public_dir)
+  await emptyDir(internal_dir)
 
   const template = await read_template(build_config.template)
 
   const components = []
   await compile_dir('./src', components)
 
+  await create_internal()
   await build_pages(components, template)
 }
 

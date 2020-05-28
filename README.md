@@ -1,3 +1,3 @@
-# Static Svelte
+# svelte-snowpack
 
-## Attempt at building a ssg on svelte
+Starter to build hydratable svelte apps with snowpack
