@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "strict": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "lib": [
+      "DOM",
+      "deno.unstable",
+      "deno.window",
+    ]
   }
 }

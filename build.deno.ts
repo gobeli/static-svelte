@@ -1,16 +1,16 @@
-import 'https://unpkg.com/svelte@3.22.3/compiler.js'
-import { join, normalize } from 'https://deno.land/std@0.53.0/path/mod.ts'
+import compiler from 'https://dev.jspm.io/svelte/compiler'
+import { join, normalize, basename } from 'https://deno.land/std@0.53.0/path/mod.ts'
 import { emptyDir, readFileStr, writeFileStr, ensureFile, exists } from 'https://deno.land/std@0.53.0/fs/mod.ts'
 
 import build_config from './build.config.ts'
 
-const compiler = (window as any)['svelte']
 const build_dir = './__build__'
 const public_dir = join(build_dir, 'public')
 
 export interface Component {
   path: string
   buildPath: string
+  clientPath: string
 }
 
 export interface Page {
@@ -39,16 +39,29 @@ async function compile_component(path: string): Promise<Component> {
     format: 'esm',
     filename: path,
     generate: 'ssr',
-    sveltePath: 'https://cdn.pika.dev/svelte@^3.22.3',
+    sveltePath: 'https://dev.jspm.io/svelte',
+  })
+
+  const client = compiler.compile(source, {
+    dev: false,
+    css: false,
+    filename: path,
+    hydratable: true,
+    format: 'esm',
+    sveltePath: 'https://dev.jspm.io/svelte',
   })
 
   // Replacing the src with __build__ for the output is hacky and unreliable --> change
   const build_path = path.replace('.svelte', '.js').replace('src', '__build__')
+  const client_path = path.replace('.svelte', '.js').replace('src', '__build__/client')
   await ensureFile(build_path)
   const code = ssr.js.code.replace(/import (.*).svelte";/g, 'import $1.js";')
   await writeFileStr(build_path, code)
+  const client_code = client.js.code.replace(/import (.*).svelte";/g, 'import $1.js";')
+  await ensureFile(client_path)
+  await writeFileStr(client_path, client_code)
 
-  return { path, buildPath: build_path }
+  return { path, buildPath: build_path, clientPath: client_path }
 }
 
 async function compile_dir(dir, components: Component[]) {
@@ -66,7 +79,7 @@ async function compile_dir(dir, components: Component[]) {
 
 async function build_pages(components: Component[], template: string) {
   build_config.pages.forEach(async (page) => {
-    const component = components.find((c) => normalize(c.path) === normalize(page.file))
+    const component: Component = components.find((c) => normalize(c.path) === normalize(page.file))
     if (!component) {
       throw new Error(`Component at ${page.file} not found!`)
     }
@@ -75,6 +88,7 @@ async function build_pages(components: Component[], template: string) {
     await ensureFile(public_path)
     const page_html = template.replace('%svelte.html%', built_component.default.render().html)
     await writeFileStr(public_path, page_html)
+    
   })
 }
 
