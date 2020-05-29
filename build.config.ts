@@ -4,5 +4,6 @@ export default <BuildConfig>{
     { file: './src/pages/index.svelte', route: '/' },
     { file: './src/pages/about.svelte', route: '/about' },
   ],
-  template: './src/template.html',
+  // no file extension, so parcel doesn't mistake it as an entrypoint 
+  template: './src/template',
 }

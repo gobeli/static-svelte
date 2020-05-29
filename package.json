@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@snowpack/plugin-parcel": "^1.0.0",
     "svelte": "^3.22.3"
   },
   "devDependencies": {

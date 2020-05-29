@@ -1,10 +1,10 @@
 {
   "scripts": {
     "mount:public": "mount public --to /",
-    "mount:src": "mount src --to /src",
+    "mount:src": "mount src --to /dist",
     "run:build": "deno run -A --unstable -c tsconfig.json --importmap import_maps.json build.deno.ts"
   },
-  "plugins": [["@snowpack/plugin-svelte", { "hydratable": true }]],
+  "plugins": ["@snowpack/plugin-parcel", ["@snowpack/plugin-svelte", { "hydratable": true, "css": false }]],
   "knownEntrypoints": ["svelte"],
   "devOptions": {},
   "installOptions": {}
