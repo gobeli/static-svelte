@@ -40,10 +40,14 @@ async function compile_component(path: string): Promise<Component> {
     format: 'esm',
     filename: path,
     generate: 'ssr',
-    css: false
+    css: false,
   })
 
-  const build_path = format({ dir: join(build_dir, relative(src_dir, dirname(path))), name: basename(path, 'svelte'), ext: 'js' })
+  const build_path = format({
+    dir: join(build_dir, relative(src_dir, dirname(path))),
+    name: basename(path, 'svelte'),
+    ext: 'js',
+  })
   await ensureFile(build_path)
   const code = ssr.js.code.replace(/import (.*).svelte";/g, 'import $1.js";')
   await writeFileStr(build_path, code)
@@ -71,7 +75,7 @@ async function create_entrypoint(page: Page) {
 
   const entrypoint = `
 // This file is generated
-import Page from '${join(dist_path, fromSrc)}'
+import Page from '${join(dist_path, fromSrc).replace(/\\/g, '/')}'
 import Dev from '../internal.svelte'
 
 new Dev({
@@ -87,7 +91,7 @@ new Dev({
 
 async function build_pages(components: Component[], template: string) {
   build_config.pages.forEach(async (page) => {
-    const component: Component = components.find((c) => normalize(c.path) === normalize(page.file))
+    const component = components.find((c) => normalize(c.path) === normalize(page.file))
     if (!component) {
       throw new Error(`Component at ${page.file} not found!`)
     }
@@ -95,14 +99,13 @@ async function build_pages(components: Component[], template: string) {
     const page_component = await import('./' + component.buildPath)
     const public_path = join(public_dir, ...page.route.split('/'), 'index.html')
 
-    const entry_file = await create_entrypoint(page)
+    const entry_file = (await create_entrypoint(page)).replace(/\\/g, '/')
 
     await ensureFile(public_path)
     const rendered_page = internal_component.default.render({ page: page_component.default })
     const page_html = template
       .replace('%svelte.notice%', 'This file is generated')
       .replace('%svelte.head%', rendered_page.head)
-      .replace('%svelte.css%', rendered_page.css.code)
       .replace('%svelte.html%', rendered_page.html)
       .replace('%svelte.bundle%', entry_file)
     await writeFileStr(public_path, page_html)
