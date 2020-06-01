@@ -1,10 +1,9 @@
-<nav>
-  A Nav
-</nav>
-<slot />
 <style>
   nav {
     padding: 1rem;
-    background-color: beige;
+    background-color: red;
   }
 </style>
+
+<nav>A Nav</nav>
+<slot />
