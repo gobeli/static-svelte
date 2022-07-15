@@ -12,7 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@snowpack/plugin-parcel": "^1.0.0",
-    "svelte": "^3.22.3"
+    "svelte": "^3.49.0"
   },
   "devDependencies": {
     "@snowpack/plugin-svelte": "^1.0.1",
